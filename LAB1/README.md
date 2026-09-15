@@ -4,7 +4,7 @@
 - **Họ và tên**: Võ Anh Kiệt
 - **Mã số sinh viên**: 1150080143
 - **Lớp**: 11CNPM2
-- **Link Video thực hành YouTube**: [Dán đường dẫn video YouTube của bạn vào đây]
+- **Link Video thực hành YouTube**: https://youtu.be/mQBtiwOYOJA
 
 ---
 
