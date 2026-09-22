@@ -1,58 +1,94 @@
-# BÁO CÁO THỰC HÀNH: LAB 1 - EXAMINING SSH & TELNET IN WIRESHARK
-
-## Thông tin sinh viên
-- **Họ và tên**: Võ Anh Kiệt
-- **Mã số sinh viên**: 1150080143
-- **Lớp**: 11CNPM2
-- **Link Video thực hành YouTube**: https://youtu.be/mQBtiwOYOJA
+# BÁO CÁO THỰC HÀNH LAB 3
+## NHẬN DIỆN VÀ ỨNG PHÓ CÁC MỐI ĐE DỌA ĐẾN AN TOÀN THÔNG TIN
 
 ---
 
-## 1. Tên bài Lab
-- **Lab 1**: Bắt gói tin Telnet - SSH (Examining SSH & Telnet in Wireshark)
-- **Học phần**: An toàn hệ thống thông tin / Bảo mật hệ thống thông tin
+### 1. THÔNG TIN SINH VIÊN
+* **Họ và tên:** Võ Anh Kiệt
+* **Mã số sinh viên (MSSV):** 1150080143
+* **Mã lớp:** 11CNPM2
+* **Học phần:** An toàn và Bảo mật Hệ thống Thông tin
+* **Link Video minh chứng (nếu có yêu cầu):** [Dán link Google Drive / YouTube Unlisted tại đây]
 
 ---
 
-## 2. Mô hình và Môi trường triển khai
-- **Nền tảng ảo hóa**: Oracle VM VirtualBox.
-- **Cấu hình card mạng**: `Host-only Adapter` (`VirtualBox Host-Only Ethernet Adapter`) – Mạng cô lập nội bộ an toàn, không định tuyến ra Internet.
-- **Phân bổ vai trò & Địa chỉ IP**:
-  - **Server (10.0.0.1/24)**: Máy ảo Ubuntu Server (chạy đồng thời dịch vụ `inetutils-telnetd` cổng 23 và `openssh-server` cổng 22).
-  - **Client & Attacker (10.0.0.2/24)**: Máy vật lý Windows (vừa đóng vai trò máy trạm khách dùng PuTTY để kết nối, vừa đóng vai trò Attacker/Giám sát sử dụng Wireshark để bắt và phân tích gói tin).
+### 2. PHIÊN BẢN MÔI TRƯỜNG THỰC HÀNH
+* **Ảo hóa:** VMware Workstation Pro 26H1 (Chế độ mạng: Host-only cô lập)
+* **Hệ điều hành máy trạm:** Windows 11 25H2 x64, OS build 26200.9445 (Bản cập nhật bảo mật KB5124008)
+* **Snapshot sạch tham chiếu:** `LAB3_CLEAN_20260914`
+* **Endpoint Protection:** Microsoft Defender Antivirus tích hợp (Real-time protection: ON, Tamper Protection: ON)
+* **Công cụ phân tích và đo đạc chuẩn hóa:**
+  * Sysmon: v15.22 (Schema cấu hình: 4.90)
+  * Autoruns: v14.3
+  * Process Explorer: v17.14
+  * Wireshark: v4.6.8 Stable + Npcap loopback driver
+  * Python: v3.14.7 (Chỉ phục vụ local load test và web server nội bộ 127.0.0.1)
 
 ---
 
-## 3. Nội dung đã thực hiện
-1. **Thiết lập môi trường**:
-   - Cấu hình IP tĩnh `10.0.0.1/24` cho Ubuntu Server bằng Netplan và `10.0.0.2/24` cho Windows Client.
-   - Kiểm tra kết nối hai chiều thành công bằng lệnh `ping` (tỷ lệ mất gói 0%).
-   - Khởi tạo tài khoản người dùng kiểm thử (`kietvo5924` / `uitlab`) với mật khẩu sinh viên.
-2. **Thực nghiệm giao thức Telnet (Cổng 23)**:
-   - Kích hoạt dịch vụ Telnet daemon (`inetutils-telnetd`) ở trạng thái `LISTEN` trên cổng 23.
-   - Kết nối từ máy Client qua PuTTY (Telnet mode) và thực thi các câu lệnh (`ls`, `mkdir telnet_test`).
-   - Sử dụng Wireshark bắt gói tin và dùng tính năng `Follow TCP Stream` để khôi phục toàn bộ username, password và lệnh dạng Plaintext.
-   - **Thử nghiệm mật khẩu phức tạp**: Đổi mật khẩu thành chuỗi ký tự dài, phức tạp (>10 ký tự: `P@ssw0rd#2026!Secured`), chứng minh giao thức Telnet vẫn để lộ nguyên văn dữ liệu qua mạng.
-3. **Thực nghiệm giao thức SSH (Cổng 22)**:
-   - Kích hoạt dịch vụ OpenSSH Server trên cổng 22.
-   - Kết nối từ Client qua PuTTY SSH, ghi nhận và phân tích hộp thoại cảnh báo `PuTTY Security Alert` xác thực Host-Key Fingerprint.
-   - Bắt gói tin SSH bằng Wireshark, chứng minh toàn bộ dữ liệu tải trọng (Payload) đều được mã hóa thành Ciphertext (Encrypted Packet).
-4. **Mở rộng - Xác thực SSH bằng Public-Key Authentication**:
-   - Sử dụng `PuTTYgen` tạo cặp khóa bất đối xứng RSA 2048-bit.
-   - Đưa Public Key lên server (`~/.ssh/authorized_keys`) và phân quyền bảo mật (`chmod 600`).
-   - Đăng nhập SSH thành công từ PuTTY bằng Private Key (`.ppk`) mà không cần nhập mật khẩu truyền thống.
-5. **Báo cáo lý thuyết & Phân tích**:
-   - Hoàn thành đầy đủ 11 câu hỏi đánh giá theo yêu cầu tài liệu Lab.
+### 3. CÁCH DỰNG MÔI TRƯỜNG
+1. **Khởi tạo VM:** Dựng máy ảo Windows 11 Pro 64-bit trên VMware Workstation với cấu hình khuyến nghị (2 vCPU, 6 GB RAM, 64 GB Disk).
+2. **Cô lập mạng & Snapshot:** Cấu hình card mạng máy ảo về `Host-only` để đảm bảo an toàn tuyệt đối. Chụp ảnh `H1_VM_Windows_Version.png` và lưu Snapshot `LAB3_CLEAN_20260914`.
+3. **Cấu trúc thư mục:** Khởi tạo cây thư mục làm việc tập trung `C:\LAB3` gồm `Evidence\`, `Tools\`, `Downloads\`, `lab3_assets\`.
+4. **Triển khai dữ liệu và công cụ:**
+   * Giải nén gói `LAB3_Threats_Assets.zip` vào thư mục `C:\LAB3\lab3_assets`.
+   * Cài đặt Python 3.14.7 và Wireshark 4.6.8 (kèm Npcap).
+   * Tải bộ công cụ Microsoft Sysinternals (Sysmon, Autoruns, Process Explorer) vào `C:\LAB3\Tools`.
+   * Chụp ảnh xác nhận phiên bản `H2_ToolVersions.png`.
+5. **Thu thập Baseline:** Chạy lệnh thu thập cấu hình hệ thống, dịch vụ mạng, tiến trình và trạng thái Defender/Firewall vào `C:\LAB3\Evidence\`. Chụp ảnh `H3_Baseline_Defender_Firewall.png`.
 
 ---
 
-## 4. Cấu trúc thư mục nộp bài
+### 4. CÁC TÌNH HUỐNG THỰC HIỆN VÀ KẾT QUẢ
+
+| STT | Tình huống (Scenario) | Mục tiêu và kỹ thuật thực hiện | Kết quả |
+| :---: | :--- | :--- | :---: |
+| **TH1** | Baseline và Risk Register | Lập Risk Register phân tích Asset - Vulnerability - Threat - Risk - Control; phân loại 5 nguồn nguy cơ. | **PASS** |
+| **TH2** | Malware (EICAR Verification) | Ghi chuỗi kiểm thử EICAR, kiểm chứng chu trình tự động chặn và cách ly của Defender (`Protection history`). Chụp ảnh H4. | **PASS** |
+| **TH3** | Password & Keylogger Risk | Bật Audit Logon, tạo tài khoản `lab3user`, sinh log đăng nhập sai (Event ID 4625) / đúng (Event ID 4624), thực hiện xoay vòng mật khẩu (credential rotation). Chụp ảnh H5. | **PASS** |
+| **TH4** | Backdoor & Persistence | Kích hoạt Sysmon schema 4.90 (Event ID 1), cấu hình persistence lành tính (Run Key & Scheduled Task), tạo HTTP listener 127.0.0.1:8080 và ánh xạ Process Explorer. Chụp ảnh H6, H7, H8. | **PASS** |
+| **TH5** | Sniffing, MITM & Spoofing | Bắt gói tin HTTP loopback phát hiện chuỗi bản rõ `TRAINING_ONLY` so sánh với mã hóa TLS/443. Chụp ảnh H9, H10a. | **PASS** |
+| **TH6** | DoS, DDoS & Mail Bombing | Thực thi kiểm thử tải nội bộ `local_load_test.py` trên 127.0.0.1; phân tích tập dữ liệu DDoS mẫu (TEST-NET) và log tấn công Mail Bombing offline. Chụp ảnh H10b. | **PASS** |
+| **TH7** | Social Engineering & Phishing | Đánh dấu 5 chỉ dấu email lừa đảo trong `phishing_email.txt`; phân loại 6 kịch bản Social Engineering từ file mẫu. Chụp ảnh H10c. | **PASS** |
+| **TH8** | Cleanup, Recovery & Hash | Gỡ bỏ toàn bộ artefact thử nghiệm, đóng cổng, xác nhận Defender vẫn bật (H11), xuất mã băm SHA-256 danh mục bằng chứng ra `evidence_sha256.csv`. | **PASS** |
+
+---
+
+### 5. LỖI GẶP PHẢI VÀ CÁCH KHẮC PHỤC
+
+* **Lỗi 1: Trình cài đặt Windows 11 bắt buộc đăng nhập tài khoản Microsoft cá nhân (OOBE Online)**
+  * *Hiện tượng:* Trình duyệt cài đặt không cho tạo tài khoản cục bộ, yêu cầu nhập email Microsoft.
+  * *Cách khắc phục:* Nhấn tổ hợp phím `Shift + F10` mở CMD, chạy lệnh `oobe\bypassnro` để khởi động lại máy ảo. Sau đó ngắt mạng tạm thời (Disconnect Network Adapter) và chọn *"Continue with limited setup"* để tạo tài khoản máy trạm offline.
+* **Lỗi 2: Không tải được winget/công cụ khi VM đang ở chế độ mạng Host-only**
+  * *Hiện tượng:* Lệnh `winget install` hoặc tải từ `download.sysinternals.com` thất bại do không có kết nối Internet ngoài.
+  * *Cách khắc phục:* Chuyển tạm card mạng máy ảo sang chế độ `NAT` trong quá trình cài đặt công cụ. Sau khi hoàn tất cài đặt và kiểm tra phiên bản (H2), chuyển card mạng trở lại `Host-only` đúng quy định bảo mật trước khi thực hành các tình huống TH1–TH7.
+* **Lỗi 3: Quyền thực thi lệnh trên PowerShell bị từ chối**
+  * *Hiện tượng:* Không thể cấu hình Run key Registry hoặc kích hoạt Audit policy.
+  * *Cách khắc phục:* Luôn mở PowerShell bằng quyền quản trị tối cao (`Run as administrator`).
+
+---
+
+### 6. CẤU TRÚC DANH MỤC TỆP TRONG THƯ MỤC LAB3/
 ```text
-LAB_AT_BMHTTT/
-│
-└── LAB1/
-    ├── README.md                                # File tóm tắt này
-    ├── Lab1_11CNPM2_1150080143_VoAnhKiet.docx   # File báo cáo Word chi tiết
-    ├── captures/                                # Thư mục chứa bằng chứng thực nghiệm
-    │   ├── telnet_capture.pcapng                 # File lưu vết Wireshark Telnet
-    │   └── ssh_capture.pcapng                    # File lưu vết Wireshark SSH
+LAB3/
+├── README.md                              # Báo cáo tổng hợp markdown
+├── [MãLớp]-LAB3_[MSSV]-[HọTên].docx        # File báo cáo Word hoàn chỉnh
+├── evidence_sha256.csv                    # Danh sách mã băm SHA-256 của các tệp bằng chứng
+├── images/                                # Thư mục chứa 11 ảnh chụp chứng minh (H1 đến H11)
+│   ├── H1_VM_Windows_Version.png
+│   ├── H2_ToolVersions.png
+│   ├── H3_Baseline_Defender_Firewall.png
+│   ├── H4_ProtectionHistory_EICAR.png
+│   ├── H5_Event4625.png
+│   ├── H6_Sysmon_Event1.png
+│   ├── H7_Autoruns_LAB3_Run_Demo.png
+│   ├── H8_ProcessExplorer_Python.png
+│   ├── H9_HTTP_Plaintext.png
+│   ├── H10_Load_and_Log_Analysis.png
+│   └── H11_Recovery_Verification.png
+└── logs/                                  # Toàn bộ tệp log và output đã được làm sạch dữ liệu
+    ├── baseline_defender.txt
+    ├── baseline_firewall.txt
+    ├── auth_events_before_rotation.txt
+    ├── local_load_test.txt
+    └── ...
