@@ -73,4 +73,3 @@
 - `smb.txt`: Tệp lọc thông tin rà soát cổng SMB 445 dạng Grepable.
 - `before_hardening.txt`: Bằng chứng quét trước khi thực hiện phòng thủ (Port 23 Open).
 - `after_hardening.txt`: Bằng chứng quét sau khi thực hiện phòng thủ (Port 23 Filtered).
-- `images/`: Thư mục chứa 8 ảnh chụp bằng chứng màn hình (`Anh1_IP_Metasploitable2.png` đến `Anh8_Output_Files.png`).
