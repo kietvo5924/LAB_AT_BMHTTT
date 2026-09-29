@@ -7,6 +7,7 @@
 - **Tên bài Lab:** LAB 4 - Khảo sát và đánh giá bề mặt mạng bằng Nmap
 - **Repository GitHub:** `LAB_AT_BMHTTT` (Chế độ Public)
 - **Thư mục bài làm:** `LAB4`
+- **Link youtube:** https://youtu.be/396p2s8oaQk
 
 ---
 
