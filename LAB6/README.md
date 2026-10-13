@@ -1,13 +1,13 @@
-# LAB 5 — THIẾT LẬP HỆ THỐNG PHÒNG THỦ MẠNG VỚI FIREWALL PFSENSE
+# LAB 6 — QUẢN TRỊ CHÍNH SÁCH BẢO MẬT, TÍCH HỢP ACTIVE DIRECTORY (LDAP), CAPTIVE PORTAL VÀ ĐIỀU TIẾT LƯU LƯỢNG VỚI PFSENSE
 
 ## 1. Thông tin bài thực hành
 
-* **Họ và tên:** Võ Anh Kiệt
-* **Mã số sinh viên:** 1150080143
-* **Mã lớp:** 11_ĐH_CNPM2
-* **Môn học:** An toàn và Bảo mật Hệ thống Thông tin
-* **Bài thực hành:** LAB 5 — Thiết lập hệ thống phòng thủ mạng với Firewall pfSense
-* **Link Video Demo:** https://youtu.be/TleqYrrv72c
+- **Họ và tên:** Võ Anh Kiệt
+- **Mã số sinh viên:** 1150080143
+- **Mã lớp:** 11_ĐH_CNPM2
+- **Môn học:** An toàn và Bảo mật Hệ thống Thông tin
+- **Bài thực hành:** LAB 6 — Quản trị chính sách bảo mật, tích hợp Active Directory (LDAP), Captive Portal và điều tiết lưu lượng với Firewall pfSense
+- **Link Video Demo:** *https://youtu.be/mW9HzHD2Phk*
 
 ---
 
@@ -15,219 +15,228 @@
 
 ### pfSense
 
-* **Phiên bản:** pfSense Community Edition 2.7.2-RELEASE
-* **WAN (`em0`):** Bridged Adapter
+- **Phiên bản:** pfSense Community Edition 2.7.2-RELEASE
+- **WAN (`em0` / Card 1):** NAT / Bridged Adapter
+  * Nhận IP tự động qua DHCP
+- **MGMT (`em1` / Card 2):** Host-Only Adapter
+  * IP: `192.168.56.254/24`
+  * Mục đích: Quản trị WebGUI độc lập, chống khóa quản trị (Anti-lockout)
+- **LAN (`em2` / Card 3):** Internal Network `lab6-lan`
+  * IP: `10.6.0.1/24`
+- **DMZ (`em3` / Card 4):** Internal Network `lab6-dmz`
+  * IP: `172.16.6.1/24`
 
-  * IP: `192.168.1.3/24`
-* **LAN (`em1`):** Host-Only Adapter
+### Windows Server — Domain Controller (DC-VoAnhKiet)
 
-  * IP: `10.0.0.1/8`
-* **DMZ (`em2`):** Internal Network `dmz-net`
+- **Hệ điều hành:** Windows Server 2025 Standard Evaluation
+- **Tên máy:** `DC-VoAnhKiet`
+- **IP tĩnh:** `10.6.0.10/24`
+- **Gateway:** `10.6.0.1`
+- **DNS:** `10.6.0.10`
+- **DNS Forwarder:** `8.8.8.8`
+- **Domain:** `voanhkiet.local`
+- **Tổ chức & Người dùng AD:**
+  * Organizational Unit (OU): `LAB6-Users`
+  * Người dùng: `sv_a`, `sv_b`
+  * Service Account (LDAP Bind): `svc_pfsense_ldap`
+- **Chính sách bảo mật bổ sung (Server 2025):** Vô hiệu hóa `LDAP server signing requirements` và `enforcement` trong `secpol.msc` để hỗ trợ Simple Bind từ pfSense.
 
-  * IP: `172.16.0.1/16`
+### LAN Test Client (LAN-Test-VoAnhKiet)
 
-### Windows Server — Domain Controller
+- **Tên máy:** `LAN-Test-VoAnhKiet`
+- **Hệ điều hành:** Ubuntu Server (CLI)
+- **Network:** Internal Network `lab6-lan`
+- **Gateway:** `10.6.0.1`
+- **IP mô phỏng luân phiên:**
+  * **Client-A:** `10.6.0.21/24`
+  * **Client-B:** `10.6.0.22/24`
 
-* **Hệ điều hành:** Windows Server 2025 Standard Evaluation
-* **IP:** `10.0.0.2/8`
-* **Gateway:** `10.0.0.1`
-* **DNS:** `10.0.0.2`
-* **DNS Forwarder:** `8.8.8.8`
-* **Domain:** `voanhkiet.local`
+### DMZ Web Server (DMZ-Test-VoAnhKiet)
 
-### LAN Test Client
-
-* **Tên máy:** `LAN-Test-VoAnhKiet`
-* **Hệ điều hành:** Ubuntu Server
-* **IP:** `10.0.0.3/8`
-* **Gateway:** `10.0.0.1`
-* **Network:** Host-Only Adapter
-
-### DMZ Test Client
-
-* **Tên máy:** `DMZ-Test-VoAnhKiet`
-* **Hệ điều hành:** Ubuntu Server
-* **IP:** `172.16.0.2/16`
-* **Gateway:** `172.16.0.1`
-* **Network:** Internal Network `dmz-net`
+- **Tên máy:** `DMZ-Test-VoAnhKiet`
+- **Hệ điều hành:** Ubuntu Server
+- **Network:** Internal Network `lab6-dmz`
+- **Gateway:** `172.16.6.1`
+- **Dịch vụ:** Nginx Web Server, file test 10MB (`/var/www/html/test10m.bin`)
+- **4 IP mô phỏng danh mục website (IP Aliasing trên `enp0s3`):**
+  * `172.16.6.10/24`: **GENERAL_SITE** (Trang web thông thường)
+  * `172.16.6.20/24`: **JOB_SITE** (Trang tìm kiếm việc làm)
+  * `172.16.6.30/24`: **SOCIAL_SITE** (Mạng xã hội)
+  * `172.16.6.40/24`: **RESTRICTED_SITE** (Trang web cấm)
 
 ---
 
-## 3. Mô hình mạng
+## 3. Mô hình mạng (Topology)
 
 ```text
-                         INTERNET
-                            │
-                            │
-                    ┌───────▼───────┐
-                    │    pfSense    │
-                    │               │
-                    │ WAN 192.168.1.3
-                    │               │
-                    │ LAN 10.0.0.1  │
-                    │ DMZ 172.16.0.1│
-                    └───┬────────┬──┘
-                        │        │
-                 LAN Network   DMZ Network
-                 10.0.0.0/8   172.16.0.0/16
-                        │        │
-             ┌──────────┴──┐  ┌──┴──────────────┐
-             │             │  │                 │
-       Windows Server   Ubuntu          Ubuntu DMZ
-       Domain Controller LAN-Test       DMZ-Test
-       10.0.0.2         10.0.0.3        172.16.0.2
+                                  INTERNET
+                                      │
+                                      ▼
+                             ┌─────────────────┐
+                             │  WAN (DHCP/NAT) │
+┌──────────────────┐         ├─────────────────┤
+│ Máy thật Admin   │◄───────►│ MGMT 192.168.56.254 (Host-Only)
+└──────────────────┘         ├─────────────────┤
+                             │     pfSense     │
+                             └────────┬────────┘
+                                      │
+                 ┌────────────────────┴────────────────────┐
+                 │                                         │
+                 ▼                                         ▼
+         LAN 10.6.0.1/24                           DMZ 172.16.6.1/24
+      (Internal: lab6-lan)                       (Internal: lab6-dmz)
+                 │                                         │
+        ┌────────┴────────┐                                │
+        │                 │                                ▼
+┌───────▼──────┐  ┌───────▼────────┐             ┌───────────────────┐
+│Windows Server│  │  Ubuntu Client │             │  DMZ Web Server   │
+│  Domain DC   │  │(A: .21 / B: .22│             │ 172.16.6.10 (GEN) │
+│  10.6.0.10   │  │ LAN-Test-Client│             │ 172.16.6.20 (JOB) │
+│voanhkiet.local  └────────────────┘             │ 172.16.6.30 (SOC) │
+└──────────────┘                                 │ 172.16.6.40 (RES) │
+                                                 └───────────────────┘
 ```
 
 ---
 
 ## 4. Các cấu hình chính
 
-### 4.1. Cấu hình pfSense
+### 4.1. Phân tách Interface & Cấu hình pfSense
+- Thiết lập 4 card mạng độc lập: WAN, MGMT (Host-Only), LAN (`lab6-lan`), DMZ (`lab6-dmz`).
+- Tách biệt cổng quản trị WebGUI sang phân đoạn MGMT, tránh xung đột với Captive Portal trên LAN.
+- Cấu hình Hybrid Outbound NAT đảm bảo định tuyến Internet khi cần thiết.
 
-* WAN sử dụng **Bridged Adapter** và nhận IP qua DHCP.
-* LAN sử dụng **Host-Only Adapter** với IP `10.0.0.1/8`.
-* DMZ sử dụng **Internal Network `dmz-net`** với IP `172.16.0.1/16`.
-* Cấu hình **Hybrid Outbound NAT** để các mạng LAN/DMZ có thể truy cập Internet khi được Firewall cho phép.
-* Tắt các rule mặc định `Default allow LAN to any rule`.
-* Xây dựng các rule Firewall riêng để kiểm soát lưu lượng giữa LAN, DMZ và Internet.
+### 4.2. Tích hợp Active Directory (LDAP) & Captive Portal
+- **LDAP Authentication Server (`LAB6-AD`):**
+  * Server IP: `10.6.0.10`, Port: `389` (Standard TCP).
+  * Search Scope: `Entire Subtree`.
+  * Base DN: `DC=voanhkiet,DC=local`.
+  * Authentication Container: `OU=LAB6-Users,DC=voanhkiet,DC=local`.
+  * Bind Credentials: `CN=svc_pfsense_ldap,CN=Users,DC=voanhkiet,DC=local`.
+- **Captive Portal Zone (`LAB6_USERS`):**
+  * Gắn trên Interface `LAN`.
+  * Cơ chế xác thực: `Use an Authentication backend` trỏ về `LAB6-AD`.
+  * Cấu hình `Allowed IP Addresses` bypass cho các máy trạm dòng lệnh CLI (`10.6.0.21`, `10.6.0.22`).
 
-### 4.2. Cấu hình Domain Controller
+### 4.3. Quản lý Đối tượng (Aliases) & Lịch biểu (Schedules)
+- **Aliases:**
+  * Host Aliases: `CLIENT_A` (`10.6.0.21`), `CLIENT_B` (`10.6.0.22`), `POLICY_CLIENTS` (`10.6.0.21`, `10.6.0.22`).
+  * Web Aliases: `GENERAL_SITE` (`.10`), `JOB_SITE` (`.20`), `SOCIAL_SITE` (`.30`), `RESTRICTED_SITE` (`.40`).
+  * Port Aliases: `WEB_PORTS` (`80`, `443`).
+- **Schedules:**
+  * `LUNCH_WINDOW`: Thứ 2 đến Thứ 6, từ 11:30 đến 13:00.
+  * `WORK_HOURS`: Thứ 2 đến Thứ 6, từ 08:00 đến 17:00.
+  * `TEST_NOW`: Lịch kiểm thử tức thì trong ngày.
 
-* Cài đặt Windows Server 2025.
-* Cấu hình IP tĩnh `10.0.0.2/8`.
-* Cài đặt **Active Directory Domain Services (AD DS)**.
-* Tạo Forest/Domain:
-  `voanhkiet.local`
-* Cấu hình DNS Forwarder:
-  `8.8.8.8`
-* Cho phép ICMP Echo Request để phục vụ kiểm thử Firewall.
-
----
-
-## 5. Các tình huống kiểm thử
-
-### Tình huống 01 — Kiểm thử Rule nền tảng Bật/Tắt
-
-**Mục tiêu:** Kiểm tra khả năng kiểm soát kết nối Internet của LAN thông qua rule nền tảng.
-
-**Kết quả:**
-
-* Khi bật rule:
-
-  * DC ping `8.8.8.8` thành công.
-  * `nslookup example.com` thành công.
-  * `curl.exe` truy cập website thành công.
-* Khi tắt rule nền tảng và Reset States:
-
-  * DC ping `8.8.8.8` bị `Request timed out`.
-
-**Kết quả:** PASS
-
-**Minh chứng:**
-
-```text
-evidence/06_KiemThu_BatTat_Rule_DC_VoAnhKiet.png
-```
+### 4.4. Điều tiết Băng thông (Traffic Shaping - Limiter)
+- Tạo 2 Pipes điều tiết: `LIMIT_DOWN` và `LIMIT_UP` với băng thông `1 Mbit/s`.
+- Áp dụng vào Rule tường lửa thông qua tùy chọn `In / Out pipe`.
 
 ---
 
-### Tình huống 02 — Chặn ICMP, cho phép Web và DNS
+## 5. Các kịch bản và kết quả kiểm thử
 
-**Mục tiêu:** Kiểm tra khả năng chặn ping nhưng vẫn cho phép DNS và HTTP/HTTPS.
+### Kịch bản Nền tảng 01 — Xác thực LDAP và Captive Portal
+- **Mục tiêu:** Kiểm tra khả năng đồng bộ danh bạ người dùng AD và cổng xác thực Captive Portal.
+- **Kết quả:**
+  * Kiểm tra qua *Diagnostics / Authentication*: User `sv_a` và `sv_b` xác thực thành công (`User authenticated successfully`).
+  * Trình duyệt máy trạm truy cập HTTP tự động nhận mã chuyển hướng `302 Found`, đăng nhập thành công hiển thị session active.
+- **Đánh giá:** PASS.
 
-**Rule LAN:**
+### Kịch bản 01 — Chặn JOB_SITE đối với Client-A
+- **Mục tiêu:** Cấm Client-A truy cập trang tuyển dụng, các trang thông thường vẫn truy cập bình thường.
+- **Quy tắc Firewall:** `Block CLIENT_A -> JOB_SITE TCP/80 + Log` đặt phía trên rule `Pass`.
+- **Kết quả:**
+  * `curl -I http://172.16.6.10`: Trả về `HTTP/1.1 200 OK` (PASS).
+  * `curl -I --connect-timeout 3 http://172.16.6.20`: Bị ngắt kết nối sau 3004 ms với lỗi `Connection timed out` (BLOCKED).
+- **Đánh giá:** PASS.
 
-```text
-1. Block ICMP
-2. Pass DNS (TCP/UDP 53)
-3. Pass Web (TCP 80/443)
-```
+### Kịch bản 02 — Chặn RESTRICTED_SITE cho toàn bộ nhóm POLICY_CLIENTS
+- **Mục tiêu:** Cấm cả Client-A và Client-B truy cập trang web cấm.
+- **Quy tắc Firewall:** `Block POLICY_CLIENTS -> RESTRICTED_SITE TCP/80 + Log`.
+- **Kết quả:**
+  * Client-A (`10.6.0.21`): Truy cập `.10` ra `200 OK`; truy cập `.40` bị `Connection timed out`.
+  * Client-B (`10.6.0.22`): Truy cập `.10` ra `200 OK`; truy cập `.40` bị `Connection timed out`.
+- **Đánh giá:** PASS.
 
-**Kết quả trên DC:**
+### Kịch bản 03 — Kiểm soát SOCIAL_SITE theo Thời gian (Schedule)
+- **Mục tiêu:** Chỉ cho phép truy cập mạng xã hội trong khung giờ nghỉ quy định, ngoài giờ sẽ bị chặn.
+- **Quy tắc Firewall:** 
+  * Rule 1: `Pass POLICY_CLIENTS -> SOCIAL_SITE TCP/80` gắn Schedule `TEST_NOW`.
+  * Rule 2: `Block POLICY_CLIENTS -> SOCIAL_SITE TCP/80` (chặn khi ngoài giờ).
+- **Kết quả:**
+  * **Trong giờ (Schedule Active):** `curl` tới `172.16.6.30` trả về `HTTP/1.1 200 OK`.
+  * **Ngoài giờ (Schedule Inactive):** `curl` tới `172.16.6.30` bị `Connection timed out` sau 3001 ms.
+- **Đánh giá:** PASS.
 
-* Ping `8.8.8.8`: BLOCKED
-* `nslookup example.com 8.8.8.8`: SUCCESS
-* `curl.exe -4 https://example.com`: SUCCESS
+### Kịch bản 04 — Giới hạn Băng thông truy cập (Traffic Shaping - Limiter)
+- **Mục tiêu:** Bóp tốc độ tải dữ liệu từ máy chủ web DMZ về máy Client xuống tối đa `1 Mbit/s`.
+- **Quy tắc Firewall:** Gắn `In / Out pipe` (`LIMIT_DOWN` / `LIMIT_UP`) vào rule Pass của LAN.
+- **Kết quả:**
+  * Chạy lệnh tải file 10MB: `curl -o /dev/null http://172.16.6.10/test10m.bin`.
+  * Tốc độ trung bình được ghìm ổn định ở mức `117.7k` (khoảng 118 KB/s ~ 1 Mbit/s).
+  * Thời gian tải kéo dài đúng 1 phút 26 giây thay vì tải tức thì.
+- **Đánh giá:** PASS.
 
-**Kết quả:** PASS
+### Kịch bản 05 — Cô lập DMZ khỏi LAN (Stateful Firewall)
+- **Mục tiêu:** Cho phép LAN kết nối Web DMZ; cấm tuyệt đối máy chủ DMZ chủ động tấn công hoặc kết nối vào vùng nội bộ LAN.
+- **Quy tắc Firewall (Tab DMZ):** `Block DMZ subnets -> LAN subnets + Log` đặt trên cùng.
+- **Kết quả:**
+  * **Chiều LAN -> DMZ:** Client-A chạy `curl` tới `172.16.6.10` nhận phản hồi `HTTP/1.1 200 OK`.
+  * **Chiều DMZ -> LAN:** Từ máy DMZ ping sang máy DC (`10.6.0.10`) nhận kết quả `100% packet loss` (bị tường lửa chặn đứng hoàn toàn).
+- **Đánh giá:** PASS.
 
-**Minh chứng:**
-
-```text
-evidence/07a_TH1_Rules_LAN_VoAnhKiet.png
-evidence/07b_TH1_KiemThu_CMD_DC_VoAnhKiet.png
-```
-
----
-
-### Tình huống 03 — Giới hạn Internet cho host cụ thể
-
-**Mục tiêu:** Chỉ cho phép Domain Controller truy cập Internet và chặn các host LAN khác.
-
-**Rule LAN:**
-
-```text
-1. Pass 10.0.0.2 to Any
-2. Block LAN net to Any
-```
-
-**Kết quả:**
-
-* DC `10.0.0.2` ping `8.8.8.8`: SUCCESS
-* Ubuntu `10.0.0.3` ping `8.8.8.8`: BLOCKED
-* Ubuntu bị mất quyền truy cập Internet theo rule Firewall.
-
-**Kết quả:** PASS
-
-**Minh chứng:**
-
-```text
-evidence/08a_TH2_Rules_LAN_VoAnhKiet.png
-evidence/08b_TH2_KiemThu_DC_va_Ubuntu_VoAnhKiet.png
-```
+### Giám sát Nhật ký Tường lửa (Firewall Logs)
+- Trang *Status / System Logs / Firewall* ghi nhận chi tiết toàn bộ các gói tin vi phạm có gắn cờ Log: thể hiện rõ biểu tượng dấu X màu đỏ chặn IP `10.6.0.21` gửi gói SYN đến các đích `.20:80` và `.40:80`.
 
 ---
 
 ## 6. Danh sách minh chứng
 
-Toàn bộ ảnh chụp quá trình cấu hình và kiểm thử được lưu trong thư mục:
+Toàn bộ ảnh chụp màn hình quá trình cấu hình và kiểm thử được lưu trữ tại thư mục:
 
 ```text
 evidence/
 ```
 
-Các minh chứng bao gồm:
+Danh mục các file ảnh minh chứng:
 
 ```text
-01_CaiDat_3CardMang_pfSense_VoAnhKiet.png
-02_Console_DatIP_LAN_10.0.0.1_VoAnhKiet.png
+01_CaiDat_4CardMang_pfSense_VoAnhKiet.png
+02_Console_DatIP_pfSense_VoAnhKiet.png
 03_Dashboard_pfSense_VoAnhKiet.png
-04_DMZ_Config_VoAnhKiet.png
-05_NAT_Outbound_Hybrid_VoAnhKiet.png
-06_LAN_Rule_NenTang_VoAnhKiet.png
-07_TH_DisableRule_DC_VoAnhKiet.png
-08a_TH1_Rules_LAN_VoAnhKiet.png
-08b_TH1_KiemThu_CMD_DC_VoAnhKiet.png
-09a_TH2_Rules_LAN_VoAnhKiet.png
-09b_TH2_KiemThu_DC_va_Ubuntu_VoAnhKiet.png
-10a_TH3_Baseline_Ping_DC_Pass_VoAnhKiet.png
-10b_TH3_Rules_DMZ_VoAnhKiet.png
-10c_TH3_KiemThu_CoLap_ThanhCong_VoAnhKiet.png
+04_DMZ_Web_IPs_Nginx.png
+05_AD_LDAP_pfSense_Config.png
+06_LDAP_Test_Diagnostics_Auth.png
+07_Captive_Portal_Zone_Config.png
+08_Captive_Portal_Login_Client.png
+09_Aliases_pfSense.png
+10_Schedules_pfSense.png
+11a_KB1_Rule_Block_JobSite.png
+11b_KB1_KiemThu_ClientA.png
+12a_KB2_Rule_Block_Restricted.png
+12b_KB2_KiemThu_ClientA_ClientB.png
+13a_KB3_Rule_Schedule_Social.png
+13b_KB3_KiemThu_TrongGio_NgoaiGio.png
+14a_KB4_Limiter_Config.png
+14b_KB4_Rule_Limiter_LAN.png
+14c_KB4_KiemThu_Limiter.png
+15a_KB5_Rule_DMZ_Block_LAN.png
+15b_KB5_KiemThu_2Chieu_LAN_DMZ.png
+15_KB5_Firewall_Logs.png
 ```
 
 ---
 
 ## 7. Kiểm tra tính toàn vẹn minh chứng
 
-File:
+File mã băm **SHA-256** được tạo để đảm bảo tính toàn vẹn và chống chỉnh sửa của các file ảnh minh chứng:
 
 ```text
 evidence_sha256.csv
 ```
 
-chứa mã băm **SHA-256** của các file minh chứng trong thư mục `evidence/`, nhằm kiểm tra tính toàn vẹn của dữ liệu.
-
-Có thể tạo lại file bằng PowerShell:
+Có thể khởi tạo hoặc kiểm tra lại bằng PowerShell:
 
 ```powershell
 Get-ChildItem -Path .\evidence\*.* |
@@ -240,26 +249,11 @@ Export-Csv -Path .\evidence_sha256.csv -NoTypeInformation -Encoding UTF8
 ## 8. Cấu trúc thư mục bàn giao
 
 ```text
-LAB5/
+LAB6/
 ├── evidence/
-│   ├── 01_CaiDat_3CardMang_pfSense_VoAnhKiet.png
-│   ├── 02_Console_DatIP_LAN_10.0.0.1_VoAnhKiet.png
-│   ├── 03_Dashboard_pfSense_VoAnhKiet.png
-│   ├── 04_DMZ_Config_VoAnhKiet.png
-│   ├── 05_NAT_Outbound_Hybrid_VoAnhKiet.png
-│   ├── 06_LAN_Rule_NenTang_VoAnhKiet.png
-│   ├── 07_TH_DisableRule_DC_VoAnhKiet.png
-│   ├── 08a_TH1_Rules_LAN_VoAnhKiet.png
-│   ├── 08b_TH1_KiemThu_CMD_DC_VoAnhKiet.png
-│   ├── 09a_TH2_Rules_LAN_VoAnhKiet.png
-│   ├── 09b_TH2_KiemThu_DC_va_Ubuntu_VoAnhKiet.png
-│   ├── 10a_TH3_Baseline_Ping_DC_Pass_VoAnhKiet.png
-│   ├── 10b_TH3_Rules_DMZ_VoAnhKiet.png
-│   └── 10c_TH3_KiemThu_CoLap_ThanhCong_VoAnhKiet.png
-│
+│   └── (Toàn bộ các ảnh chụp minh chứng định dạng Screenshot_YYYY-MM-DD.png)
 ├── evidence_sha256.csv
-├── pfSense-Config-Backup-VoAnhKiet.xml
-├── 11_DH_CNPM2-Lab3_1150080143-VoAnhKiet.docx
+├── 11CNPM2_LAB6_1150080143_VoAnhKiet.docx
 └── README.md
 ```
 
@@ -267,18 +261,15 @@ LAB5/
 
 ## 9. Tổng kết
 
-LAB 5 đã triển khai thành công mô hình Firewall pfSense với ba vùng mạng:
+LAB 6 đã xây dựng và kiểm thử thành công hệ thống phòng thủ mạng nâng cao kết hợp xác thực tập trung:
 
-* **WAN:** Kết nối Internet.
-* **LAN:** Mạng nội bộ chứa Domain Controller và máy kiểm thử.
-* **DMZ:** Vùng mạng riêng biệt dành cho máy chủ/máy kiểm thử DMZ.
+1. **Kiến trúc mạng 4 vùng an toàn:** Phân tách rõ ràng WAN, MGMT (Out-of-band), LAN nội bộ và DMZ cung cấp dịch vụ.
+2. **Tích hợp Active Directory qua LDAP:** Kết nối pfSense với Windows Server 2025, xử lý thành công chính sách bảo mật *LDAP Signing Enforcement*.
+3. **Cổng kiểm soát Captive Portal:** Xác thực danh tính người dùng trước khi cấp quyền truy cập mạng.
+4. **Kiểm soát chính sách truy cập chi tiết:**
+   - Lọc trang web theo nhóm đối tượng người dùng (Aliases).
+   - Kiểm soát truy cập linh hoạt theo khung giờ (Schedules).
+   - Giới hạn lưu lượng băng thông chính xác với thuật toán Dummynet Limiter (1 Mbit/s).
+5. **Đảm bảo nguyên tắc Stateful Firewall:** Cô lập hoàn toàn vùng DMZ khỏi LAN, ngăn chặn việc leo thang truy cập trái phép vào tài nguyên nội bộ.
 
-Các tình huống kiểm thử đã xác nhận Firewall có khả năng:
-
-* Kiểm soát quyền truy cập Internet của LAN.
-* Chặn ICMP nhưng cho phép DNS và Web.
-* Giới hạn Internet theo từng host.
-* Cô lập DMZ khỏi LAN.
-* Đồng thời vẫn cho phép DMZ truy cập Internet khi được cấu hình phù hợp.
-
-**Tất cả các tình huống kiểm thử đều đạt kết quả PASS.**
+**Tất cả các nội dung và tình huống kiểm thử trong LAB 6 đều đạt kết quả PASS.**
