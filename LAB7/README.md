@@ -14,7 +14,7 @@
 
 \- \*\*Bài thực hành:\*\* LAB 7 — Web Protection: Phân tách vai trò L3/L4 Firewall và L7 Content Filtering, kiểm soát truy cập danh mục, xác thực mở khóa tạm thời (Bypass), giới hạn dung lượng tải và ngăn chặn mã độc với ClamAV.
 
-\- \*\*Link Video Demo:\*\* https://youtu.be/mW9HzHD2Phk
+\- \*\*Link Video Demo:\*\* https://youtu.be/40XOpLcQOU8
 
 
 
