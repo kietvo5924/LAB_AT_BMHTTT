@@ -6,7 +6,7 @@
 - **Mã lớp:** 11_ĐH_CNPM2
 - **Môn học:** An toàn và Bảo mật Hệ thống Thông tin
 - **Bài thực hành:** LAB 9 (Kế thừa pfSense LAB 8) — Local DNS Attack: Xây dựng Recursive DNS Resolver BIND9, thực thi tấn công HOSTS-file redirection, Direct DNS Spoofing và DNS Cache Poisoning trong mạng ảo cô lập; đánh giá cơ chế phòng thủ DNSSEC, DNS COOKIE và phân đoạn mạng.
-- **Link Video Demo:** https://youtu.be/40XOpLcQOU8
+- **Link Video Demo:** https://youtu.be/XyNU5y_eL8s
 
 ---
 
