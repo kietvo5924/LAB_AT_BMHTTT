@@ -1,154 +1,110 @@
-LAB 2 — MÃ HÓA ĐỐI XỨNG CỔ ĐIỂN: JAVA SWING, MAVEN VÀ MICROSOFT SQL SERVER
+\# LAB 2 - MÃ HÓA ĐỐI XỨNG HIỆN ĐẠI
 
 
 
-1\. Thông tin bài thực hành
+\- \*\*Họ và tên:\*\* Võ Anh Kiệt
 
-\- Họ và tên: Võ Anh Kiệt
+\- \*\*MSSV:\*\* 1150080143
 
-\- Mã số sinh viên: 1150080143
+\- \*\*Lớp:\*\* 11CNPM2
 
-\- Mã lớp: 11\_ĐH\_CNPM2
+\- \*\*Học phần:\*\* An toàn và Bảo mật Hệ thống Thông tin
 
-\- Môn học: An toàn và Bảo mật Thông tin
+\- \*\*LINK Youtube:\*\* https://youtu.be/pDRud87fHVE
 
-\- Bài thực hành: LAB 1 — Mã hóa đối xứng cổ điển: Xây dựng ứng dụng Java Swing nền tảng Maven tích hợp 6 thuật toán mật mã cổ điển (Caesar, Vigenère, Rail Fence, Playfair, Transposition, Autokey); phát triển form tổng hợp lưu trữ lịch sử thao tác vào Microsoft SQL Server; hiện thực các kỹ thuật thám mã cổ điển gồm vét cạn (Brute-Force), phân tích tần suất (Frequency Analysis) và tấn công biết trước bản rõ (Known Plaintext).
 
-\- Link Video Demo: https://youtu.be/Bt78WBOBcOw
 
+\---
 
 
-2\. Môi trường và công nghệ sử dụng
 
-\- Ngôn ngữ lập trình: Java (JDK 17)
+\## 1. Giới thiệu bài thực hành
 
-\- Công cụ phát triển (IDE): Apache NetBeans
+Chương trình xây dựng ứng dụng Java Swing (Maven) kết hợp Python (Tkinter) và Microsoft SQL Server nhằm minh họa các thuật toán mã hóa đối xứng hiện đại, quản lý đăng ký/đăng nhập người dùng và lưu vết lịch sử thao tác:
 
-\- Quản lý dự án: Apache Maven
+\- \*\*2.1 DES:\*\* Chế độ CBC, đệm PKCS5, khóa 8 byte, IV ngẫu nhiên 8 byte.
 
-\- Hệ quản trị cơ sở dữ liệu: Microsoft SQL Server (TCP Port 14333, Mixed Mode Authentication)
+\- \*\*2.2 TripleDES (3DES):\*\* Chế độ CBC, đệm PKCS5, khóa 24 byte, IV ngẫu nhiên 8 byte.
 
-\- Công cụ quản trị CSDL: SQL Server Management Studio (SSMS)
+\- \*\*2.3 AES-256-GCM + Login:\*\* Dẫn xuất khóa bằng PBKDF2-HMAC-SHA256 (120.000 vòng), xác thực người dùng qua SQL Server, cấp phiên làm việc (Ticket) và lưu lịch sử thao tác.
 
-\- Thư viện kết nối CSDL: mssql-jdbc (phiên bản 12.8.1.jre11)
+\- \*\*2.4 RC4:\*\* Mã dòng KSA + PRGA, hiển thị bản mã dạng HEX.
 
+\- \*\*2.5 Twofish:\*\* Sử dụng thư viện BouncyCastle, chế độ CBC + PKCS7, khóa SHA-256, IV 16 byte HEX, hỗ trợ lưu và khôi phục IV từ tệp.
 
+\- \*\*2.6 Nâng cao 01 - AES-256-CTR (Java):\*\* Biến AES thành mã dòng, không cần đệm, dùng Key 256-bit và Nonce 96-bit ngẫu nhiên.
 
-3\. Cấu trúc thư mục dự án
+\- \*\*2.6 Nâng cao 02 - AES-256-CBC (Python):\*\* Giao diện Tkinter sử dụng thư viện `cryptography`, hỗ trợ tự kiểm thử (`--self-test`).
 
-11CNPM2\_1150080143\_VoAnhKiet\_LAB1/
 
-├── 01\_SourceCode/
 
-│   └── LAB1\_TuLam\_VoAnhKiet/
+\---
 
-│       ├── pom.xml
 
-│       └── src/main/java/week\_01/
 
-│           ├── FileTextIO.java
+\## 2. Yêu cầu môi trường
 
-│           ├── CaesarCipher.java
+\- \*\*JDK:\*\* 17 trở lên
 
-│           ├── VigenereCipher.java
+\- \*\*IDE:\*\* Apache NetBeans 20+ (Maven)
 
-│           ├── RailFenceCipher.java
+\- \*\*CSDL:\*\* Microsoft SQL Server Express \& SSMS (bật TCP/IP cổng `14333` và Mixed Mode Authentication)
 
-│           ├── PlayfairCipher.java
+\- \*\*Python:\*\* Python 3.10+ và thư viện `cryptography`
 
-│           ├── TranspositionCipher.java
 
-│           ├── AutokeyCipher.java
 
-│           ├── CipherTongHop.java
+\---
 
-│           ├── DbConfig.java
 
-│           ├── HistoryDao.java
 
-│           ├── AttackDemos.java
+\## 3. Hướng dẫn cấu hình và chạy chương trình
 
-│           ├── frm\_Menu.java (.form)
 
-│           ├── frm\_Caesar.java (.form)
 
-│           ├── frm\_Vigenere.java (.form)
+\### Bước 1: Khởi tạo cơ sở dữ liệu SQL Server
 
-│           ├── frm\_RailFence.java (.form)
+1\. Mở \*\*SQL Server Management Studio (SSMS)\*\* bằng quyền quản trị.
 
-│           ├── frm\_Playfair.java (.form)
+2\. Mở và thực thi tệp `01\_Tao\_CSDL.sql` để tạo cơ sở dữ liệu `LAB2\_MaHoaHienDai` cùng hai bảng `dbo.app\_users` và `dbo.crypto\_history`.
 
-│           ├── frm\_Transposition.java (.form)
+3\. Mở và thực thi tệp `02\_Tao\_Tai\_Khoan\_SQL.sql` (cập nhật mật khẩu tài khoản SQL theo cấu hình máy cá nhân trước khi chạy).
 
-│           ├── frm\_Autokey.java (.form)
+4\. Sử dụng tệp `03\_Kiem\_Tra\_Du\_Lieu.sql` để kiểm tra dữ liệu người dùng và lịch sử thao tác sau khi chạy ứng dụng.
 
-│           ├── frm\_TongHop.java (.form)
 
-│           ├── frm\_KetNoiSQL.java (.form)
 
-│           ├── frm\_LichSu.java (.form)
+\### Bước 2: Chạy ứng dụng Java Swing (NetBeans)
 
-│           └── frm\_TanCong.java (.form)
+1\. Mở project Maven `LAB2\_MaHoaHienDai` trong Apache NetBeans.
 
-├── 02\_Database/
+2\. Nhấp chuột phải vào project → chọn \*\*Clean and Build\*\* (`Shift + F11`) để Maven tải thư viện `mssql-jdbc` và `bcprov-jdk18on`.
 
-│   ├── 01\_Tao\_CSDL.sql
+3\. Nhấp chuột phải vào project → chọn \*\*Run\*\* (`F6`) để khởi chạy giao diện chính `week\_02.frm\_Menu`.
 
-│   └── 03\_Kiem\_Tra\_Du\_Lieu.sql
+4\. Chọn \*\*Kết nối SQL Server\*\*, nhập thông tin kết nối (`127.0.0.1`, port `14333`, database `LAB2\_MaHoaHienDai`, user và password đã cấu hình) → bấm \*\*Test Connection\*\*, sau đó trải nghiệm các chức năng từ `2.1` đến `2.6`.
 
-├── 03\_Screenshots/
 
-└── 04\_BaoCao/
 
-&#x20;   └── 11CNPM2\_LAB10\_1150080143\_VoAnhKiet.docx
+\### Bước 3: Chạy chương trình Python (Bài nâng cao 02)
 
+Mở terminal/PowerShell tại thư mục chứa tệp `aes\_cbc\_gui.py` và thực hiện:
 
+```bash
 
-4\. Các chức năng đã hoàn thành
+\# Cài đặt thư viện mã hóa (nếu chưa cài)
 
-\- Mã hóa và giải mã 6 thuật toán cổ điển độc lập kèm tính năng đọc và ghi file văn bản UTF-8 (.txt):
+py -m pip install cryptography
 
-&#x20; + Bài 1.1 Caesar Cipher (dịch chuyển ký tự theo khóa số nguyên k).
 
-&#x20; + Bài 1.2 Vigenère Cipher (mã hóa đa bảng theo từ khóa lặp).
 
-&#x20; + Bài 1.3 Rail Fence Cipher (xếp đường zigzag theo số hàng).
+\# Chạy bộ tự kiểm thử
 
-&#x20; + Bài 1.4 Playfair Cipher (ma trận khóa 5x5, thay thế theo cặp ký tự).
+py aes\_cbc\_gui.py --self-test
 
-&#x20; + Bài 1.5 Transposition Cipher (hoán vị theo thứ tự đọc cột).
 
-&#x20; + Bài 1.6 Autokey Cipher (dòng khóa tự sinh nối tiếp bằng bản rõ).
 
-\- Bài nâng cao 01:
+\# Chạy giao diện đồ họa
 
-&#x20; + Form tổng hợp tích hợp chọn nhanh 6 thuật toán qua JComboBox.
-
-&#x20; + Module kết nối an toàn tới SQL Server sử dụng kết nối mạng TCP cổng 14333.
-
-&#x20; + Tự động lưu vết mọi thao tác Encrypt/Decrypt vào bảng dbo.history và hiển thị lịch sử trên JTable.
-
-\- Bài nâng cao 02:
-
-&#x20; + Tấn công vét cạn (Brute-Force) thử toàn bộ 26 không gian khóa Caesar và tính điểm tự động nhận diện bản rõ có nghĩa.
-
-&#x20; + Phân tích thống kê tần suất ký tự trong bản mã (Frequency Analysis).
-
-&#x20; + Thám mã Vigenère khi biết trước cặp bản rõ và bản mã (Known Plaintext Attack).
-
-\- Menu chính (frm\_Menu) điều hướng toàn bộ ứng dụng độc lập.
-
-
-
-5\. Hướng dẫn thiết lập và chạy chương trình
-
-\- Bước 1: Mở SQL Server Management Studio (SSMS), mở và chạy file 01\_Tao\_CSDL.sql để khởi tạo CSDL LAB1\_MaHoaCoDien\_VoAnhKiet và bảng dbo.history.
-
-\- Bước 2: Kích hoạt chế độ Mixed Mode và đảm bảo tài khoản kết nối lab1\_user hoạt động trên cổng TCP 14333.
-
-\- Bước 3: Mở project bằng Apache NetBeans, chọn Clean and Build để Maven tải các dependency.
-
-\- Bước 4: Chạy file frm\_Menu.java (Shift + F6) hoặc chạy toàn bộ project (F6).
-
-\- Bước 5: Tại giao diện menu, mở form Kết nối SQL Server để xác thực kết nối, sau đó truy cập các tính năng mã hóa và thám mã tương ứng.
+py aes\_cbc\_gui.py
 
